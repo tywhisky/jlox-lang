@@ -77,12 +77,24 @@ class Scanner {
                 addToken(match('=') ? GREATER_EQUAL : GREATER);
                 break;
             case '/':
-              if(match('/')) {
-                while (peek() != '\n' && !isAtEnd()) advance();
-              } else {
-                addToken(SLASH);
-              }
-              break;
+                if (match('/')) {
+                    while (peek() != '\n' && !isAtEnd()) {
+                        advance();
+                    }
+                } else {
+                    addToken(SLASH);
+                }
+                break;
+            case ' ':
+            case '\r':
+            case '\t':
+                break;
+
+            case '\n':
+                line++;
+                break;
+
+            case '"': string(); break;
 
             default:
                 Lox.error(line, "Unexpected character.");
@@ -96,8 +108,27 @@ class Scanner {
     }
 
     private char peek() {
-      if (isAtEnd()) return '\0';
-      return source.charAt(current);
+        if (isAtEnd()) {
+            return '\0';
+        }
+        return source.charAt(current);
+    }
+
+    private void string() {
+      while(peek() != '"' && !isAtEnd()) {
+        if (peek() == '\n') line++;
+        advance();
+      }
+
+      if(isAtEnd()) {
+        Lox.error(line, "Unterminated string.");
+        return;
+      }
+
+      advance();
+
+      String value = source.substring(start + 1, current - 1);
+      addToken(STRING, value);
     }
 
     private void addToken(TokenType type) {
@@ -110,10 +141,14 @@ class Scanner {
     }
 
     private boolean match(char expected) {
-      if(isAtEnd()) return false;
-      if(source.charAt(current) != expected) return false;
+        if (isAtEnd()) {
+            return false;
+        }
+        if (source.charAt(current) != expected) {
+            return false;
+        }
 
-      current ++;
-      return true;
+        current++;
+        return true;
     }
 }
