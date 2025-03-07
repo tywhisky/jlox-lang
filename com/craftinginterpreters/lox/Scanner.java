@@ -1,7 +1,6 @@
 package com.craftinginterpreters.lox;
 
 import static com.craftinginterpreters.lox.TokenType.*;
-import java.lang.classfile.constantpool.LoadableConstantEntry;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -94,11 +93,18 @@ class Scanner {
                 line++;
                 break;
 
-            case '"': string(); break;
+            case '"':
+                string();
+                break;
 
             default:
-                Lox.error(line, "Unexpected character.");
-                break;
+                if (isDigit(c)) {
+                    number();
+                } else {
+                    Lox.error(line, "Unexpected character.");
+                    break;
+                }
+
         }
     }
 
@@ -115,20 +121,22 @@ class Scanner {
     }
 
     private void string() {
-      while(peek() != '"' && !isAtEnd()) {
-        if (peek() == '\n') line++;
+        while (peek() != '"' && !isAtEnd()) {
+            if (peek() == '\n') {
+                line++;
+            }
+            advance();
+        }
+
+        if (isAtEnd()) {
+            Lox.error(line, "Unterminated string.");
+            return;
+        }
+
         advance();
-      }
 
-      if(isAtEnd()) {
-        Lox.error(line, "Unterminated string.");
-        return;
-      }
-
-      advance();
-
-      String value = source.substring(start + 1, current - 1);
-      addToken(STRING, value);
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
     }
 
     private void addToken(TokenType type) {
@@ -150,5 +158,30 @@ class Scanner {
 
         current++;
         return true;
+    }
+
+    private boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    private void number() {
+        while (isDigit((peek()))) {
+            advance();
+        }
+
+        if (peek() == '.' && isDigit(peekNext())) {
+            advance();
+            while (isDigit(peek())) {
+                advance();
+            }
+        }
+
+        addToken(NUMBER,
+                Double.parseDouble(source.substring(start, current)));
+    }
+
+    private char peekNext() {
+      if(current + 1 >= source.length()) return '\n';
+      return source.charAt(current + 1);
     }
 }
